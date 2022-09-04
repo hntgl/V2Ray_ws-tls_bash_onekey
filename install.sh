@@ -76,15 +76,15 @@ VERSION=$(echo "${VERSION}" | awk -F "[()]" '{print $2}')
 
 check_system() {
     if [[ "${ID}" == "centos" && ${VERSION_ID} -ge 7 ]]; then
-        echo -e "${OK} ${GreenBG} 当前系统为 Centos ${VERSION_ID} ${VERSION} ${Font}"
+        echo -e "${OK} ${GreenBG} The current system is Centos ${VERSION_ID} ${VERSION} ${Font}"
         INS="yum"
     elif [[ "${ID}" == "debian" && ${VERSION_ID} -ge 8 ]]; then
-        echo -e "${OK} ${GreenBG} 当前系统为 Debian ${VERSION_ID} ${VERSION} ${Font}"
+        echo -e "${OK} ${GreenBG} The current system is Debian ${VERSION_ID} ${VERSION} ${Font}"
         INS="apt"
         $INS update
-        ## 添加 Nginx apt源
+        ## Add Nginx apt source
     elif [[ "${ID}" == "ubuntu" && $(echo "${VERSION_ID}" | cut -d '.' -f1) -ge 16 ]]; then
-        echo -e "${OK} ${GreenBG} 当前系统为 Ubuntu ${VERSION_ID} ${UBUNTU_CODENAME} ${Font}"
+        echo -e "${OK} ${GreenBG} The current system is Ubuntu ${VERSION_ID} ${UBUNTU_CODENAME} ${Font}"
         INS="apt"
         rm /var/lib/dpkg/lock
         dpkg --configure -a
@@ -92,7 +92,7 @@ check_system() {
         rm /var/cache/apt/archives/lock
         $INS update
     else
-        echo -e "${Error} ${RedBG} 当前系统为 ${ID} ${VERSION_ID} 不在支持的系统列表内，安装中断 ${Font}"
+        echo -e "${Error} ${RedBG} The current system is ${ID} ${VERSION_ID} Not in the list of supported systems, installation aborted ${Font}"
         exit 1
     fi
 
@@ -100,19 +100,19 @@ check_system() {
 
     systemctl stop firewalld
     systemctl disable firewalld
-    echo -e "${OK} ${GreenBG} firewalld 已关闭 ${Font}"
+    echo -e "${OK} ${GreenBG} firewalld closed ${Font}"
 
     systemctl stop ufw
     systemctl disable ufw
-    echo -e "${OK} ${GreenBG} ufw 已关闭 ${Font}"
+    echo -e "${OK} ${GreenBG} ufw closed ${Font}"
 }
 
 is_root() {
     if [ 0 == $UID ]; then
-        echo -e "${OK} ${GreenBG} 当前用户是root用户，进入安装流程 ${Font}"
+        echo -e "${OK} ${GreenBG} The current user is the root user，Enter the installation process ${Font}"
         sleep 3
     else
-        echo -e "${Error} ${RedBG} 当前用户不是root用户，请切换到root用户后重新执行脚本 ${Font}"
+        echo -e "${Error} ${RedBG} The current user is not the root user, please switch to the root user and execute the script again ${Font}"
         exit 1
     fi
 }
@@ -129,7 +129,7 @@ judge() {
 
 chrony_install() {
     ${INS} -y install chrony
-    judge "安装 chrony 时间同步服务 "
+    judge "Install chrony time synchronization service "
 
     timedatectl set-ntp true
 
@@ -139,25 +139,25 @@ chrony_install() {
         systemctl enable chrony && systemctl restart chrony
     fi
 
-    judge "chronyd 启动 "
+    judge "chronyd start "
 
     timedatectl set-timezone Asia/Shanghai
 
-    echo -e "${OK} ${GreenBG} 等待时间同步 ${Font}"
+    echo -e "${OK} ${GreenBG} wait for time synchronization ${Font}"
     sleep 10
 
     chronyc sourcestats -v
     chronyc tracking -v
     date
-    read -rp "请确认时间是否准确,误差范围±3分钟(Y/N): " chrony_install
+    read -rp "Please confirm whether the time is accurate, the error range is ±3 minutes(Y/N): " chrony_install
     [[ -z ${chrony_install} ]] && chrony_install="Y"
     case $chrony_install in
     [yY][eE][sS] | [yY])
-        echo -e "${GreenBG} 继续安装 ${Font}"
+        echo -e "${GreenBG} continue installation ${Font}"
         sleep 2
         ;;
     *)
-        echo -e "${RedBG} 安装终止 ${Font}"
+        echo -e "${RedBG} Installation terminated ${Font}"
         exit 2
         ;;
     esac
@@ -171,7 +171,7 @@ dependency_install() {
     else
         ${INS} -y install cron
     fi
-    judge "安装 crontab"
+    judge "Install crontab"
 
     if [[ "${ID}" == "centos" ]]; then
         touch /var/spool/cron/root && chmod 600 /var/spool/cron/root
@@ -181,26 +181,26 @@ dependency_install() {
         systemctl start cron && systemctl enable cron
 
     fi
-    judge "crontab 自启动配置 "
+    judge "crontab autostart configuration "
 
     ${INS} -y install bc
-    judge "安装 bc"
+    judge "Install bc"
 
     ${INS} -y install unzip
-    judge "安装 unzip"
+    judge "Install unzip"
 
     ${INS} -y install qrencode
-    judge "安装 qrencode"
+    judge "Install qrencode"
 
     ${INS} -y install curl
-    judge "安装 curl"
+    judge "Install curl"
 
     if [[ "${ID}" == "centos" ]]; then
         ${INS} -y groupinstall "Development tools"
     else
         ${INS} -y install build-essential
     fi
-    judge "编译工具包 安装"
+    judge "build toolkit install"
 
     if [[ "${ID}" == "centos" ]]; then
         ${INS} -y install pcre pcre-devel zlib-devel epel-release
@@ -209,23 +209,23 @@ dependency_install() {
     fi
 
     #    ${INS} -y install rng-tools
-    #    judge "rng-tools 安装"
+    #    judge "rng-tools Install"
 
     ${INS} -y install haveged
-    #    judge "haveged 安装"
+    #    judge "haveged Install"
 
     #    sed -i -r '/^HRNGDEVICE/d;/#HRNGDEVICE=\/dev\/null/a HRNGDEVICE=/dev/urandom' /etc/default/rng-tools
 
     if [[ "${ID}" == "centos" ]]; then
         #       systemctl start rngd && systemctl enable rngd
-        #       judge "rng-tools 启动"
+        #       judge "rng-tools start"
         systemctl start haveged && systemctl enable haveged
-        #       judge "haveged 启动"
+        #       judge "haveged start"
     else
         #       systemctl start rng-tools && systemctl enable rng-tools
-        #       judge "rng-tools 启动"
+        #       judge "rng-tools start"
         systemctl start haveged && systemctl enable haveged
-        #       judge "haveged 启动"
+        #       judge "haveged start"
     fi
 
     mkdir -p /usr/local/bin >/dev/null 2>&1
@@ -248,7 +248,7 @@ basic_optimization() {
 
 port_alterid_set() {
     if [[ "on" != "$old_config_status" ]]; then
-        read -rp "请输入连接端口（default:443）:" port
+        read -rp "Please enter the connection port（default:443）:" port
         [[ -z ${port} ]] && port="443"
         alterID="0"
     fi
@@ -259,7 +259,7 @@ modify_path() {
         camouflage="$(grep '\"path\"' $v2ray_qr_config_file | awk -F '"' '{print $4}')"
     fi
     sed -i "/\"path\"/c \\\t  \"path\":\"${camouflage}\"" ${v2ray_conf}
-    judge "V2ray 伪装路径 修改"
+    judge "V2ray camouflage path modification"
 }
 
 modify_inbound_port() {
@@ -272,7 +272,7 @@ modify_inbound_port() {
     else
         sed -i "/\"port\"/c  \    \"port\":${port}," ${v2ray_conf}
     fi
-    judge "V2ray inbound_port 修改"
+    judge "V2ray inbound_port modify"
 }
 
 modify_UUID() {
@@ -281,7 +281,7 @@ modify_UUID() {
         UUID="$(info_extraction '\"id\"')"
     fi
     sed -i "/\"id\"/c \\\t  \"id\":\"${UUID}\"," ${v2ray_conf}
-    judge "V2ray UUID 修改"
+    judge "V2ray UUID modify"
     [ -f ${v2ray_qr_config_file} ] && sed -i "/\"id\"/c \\  \"id\": \"${UUID}\"," ${v2ray_qr_config_file}
     echo -e "${OK} ${GreenBG} UUID:${UUID} ${Font}"
 }
@@ -292,9 +292,9 @@ modify_nginx_port() {
     fi
     sed -i "/ssl http2;$/c \\\tlisten ${port} ssl http2;" ${nginx_conf}
     sed -i "3c \\\tlisten [::]:${port} http2;" ${nginx_conf}
-    judge "V2ray port 修改"
+    judge "V2ray port modify"
     [ -f ${v2ray_qr_config_file} ] && sed -i "/\"port\"/c \\  \"port\": \"${port}\"," ${v2ray_qr_config_file}
-    echo -e "${OK} ${GreenBG} 端口号:${port} ${Font}"
+    echo -e "${OK} ${GreenBG} The port number:${port} ${Font}"
 }
 
 modify_nginx_other() {
@@ -311,7 +311,7 @@ web_camouflage() {
     mkdir -p /home/wwwroot
     cd /home/wwwroot || exit
     git clone https://github.com/wulabing/3DCEList.git
-    judge "web 站点伪装"
+    judge "web site masquerading"
 }
 
 v2ray_install() {
@@ -329,9 +329,9 @@ v2ray_install() {
         rm -rf $v2ray_systemd_file
         systemctl daemon-reload
         bash v2ray.sh --force
-        judge "安装 V2ray"
+        judge "Install V2ray"
     else
-        echo -e "${Error} ${RedBG} V2ray 安装文件下载失败，请检查下载地址是否可用 ${Font}"
+        echo -e "${Error} ${RedBG} V2ray The installation file download failed, please check whether the download address is available ${Font}"
         exit 4
     fi
     # 清除临时文件
@@ -340,10 +340,10 @@ v2ray_install() {
 
 nginx_exist_check() {
     if [[ -f "/etc/nginx/sbin/nginx" ]]; then
-        echo -e "${OK} ${GreenBG} Nginx已存在，跳过编译安装过程 ${Font}"
+        echo -e "${OK} ${GreenBG} Nginx already exists，Skip the compilation and installation process ${Font}"
         sleep 2
     elif [[ -d "/usr/local/nginx/" ]]; then
-        echo -e "${OK} ${GreenBG} 检测到其他套件安装的Nginx，继续安装会造成冲突，请处理后安装${Font}"
+        echo -e "${OK} ${GreenBG} Nginx installed by other packages is detected. Continuing the installation will cause conflicts. Please install it after processing.${Font}"
         exit 1
     else
         nginx_install
